@@ -1,0 +1,39 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Caches and virtual environments
+.pytest_cache/
+.venv/
+.venv
+.idea/
+.vscode/
+*.egg-info/
+dist/
+build/
+.hf_cache/
+.torch_cache/
+
+# OS / Editor artifacts
+.DS_Store
+*.swp
+*.swo
+
+# Datasets and checkpoints
+data/
+ckpt/
+output/
+logs/
+*.pt
+*.pth
+*.tar.gz
+cifar-10-python.tar.gz
+cifar-10-batches-py/
+cifar-100-python/
+
+# Internal documentation and notes
+docs/
+CLAUDE.md
+.claude/
+paper/

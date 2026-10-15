@@ -1,0 +1,40 @@
+SETTING: "gradual_mixed_corruption"
+
+MODEL:
+  ADAPTATION: lora_base
+  ARCH: Hendrycks2020AugMix_ResNeXt
+
+# ===== Evaluation Data Generation =====
+# Identical to aura.yaml — same stream configuration
+MIXED_GRADUAL:
+  FRAMES: 1000
+  BATCH_SIZE: 100
+  CORRUPTION_TYPES: ["motion_blur","defocus_blur","shot_noise","gaussian_noise","glass_blur","impulse_noise"]
+  SEVERITY: 5
+  SCHEDULE_TYPE: "random"
+
+RNG_SEED: 1
+
+CORRUPTION:
+  DATASET: cifar100_c
+  SEVERITY:
+    - 5
+  TYPE:
+    - gaussian_noise
+    - shot_noise
+    - impulse_noise
+    - defocus_blur
+    - glass_blur
+    - motion_blur
+
+LORA:
+  RANK: 4
+  ALPHA: 8.0
+  LR: 1e-3
+  OPTIM_METHOD: "Adam"
+  WEIGHT_DECAY: 0.0
+  MOMENTUM: 0.9
+  NESTEROV: False
+  NUM_UPDATES_PER_SAMPLE: 1
+  NUM_ADAPT_SAMPLES: 15
+  SCOPE: "fc_stage1"

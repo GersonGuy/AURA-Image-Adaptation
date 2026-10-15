@@ -1,0 +1,24 @@
+SETTING: "gradual_mixed_corruption"
+
+MODEL:
+  ADAPTATION: ekf_fc
+  ARCH: resnet18_mnist
+  CKPT_PATH: "./ckpt/resnet18_mnist.pth"
+
+MIXED_GRADUAL:
+  FRAMES: 1000
+  BATCH_SIZE: 100
+  CORRUPTION_TYPES: ["shot_noise","impulse_noise","motion_blur","glass_blur","fog","brightness"]
+  SEVERITY: 1
+  SCHEDULE_TYPE: "random"
+
+CORRUPTION:
+  DATASET: mnist_c
+  SEVERITY: [1]
+  TYPE: [shot_noise, impulse_noise, motion_blur, glass_blur, fog, brightness]
+
+EKF_FC:
+  OBS_COV_SCALE: 0.001
+  GAMMA: 0.999
+  INIT_COV_SCALE: 0.01
+  NUM_ADAPT_SAMPLES: 15

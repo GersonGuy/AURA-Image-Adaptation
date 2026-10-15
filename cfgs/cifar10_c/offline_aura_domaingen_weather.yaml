@@ -1,0 +1,97 @@
+# ============================================================
+# Offline training config for AURA_FC-BN - DOMAIN-GEN (weather/digital M)
+#
+# Disjoint pools:
+#   Pool M (offline, trained here) -- weather/digital, 7 corruptions:
+#     zoom_blur, snow, frost, fog, brightness, contrast, elastic_transform
+#   Pool N (online eval, test-time) -- noise/blur, 6 corruptions:
+#     gaussian_noise, shot_noise, impulse_noise,
+#     defocus_blur, glass_blur, motion_blur
+#
+# These two pools share NO corruption -- this is the genuinely-disjoint
+# domain-generalization setup (cf. offline_aura_fc_domaingen.yaml, whose M
+# overlapped the test pool).
+#
+# CORRUPTION.TYPE is set to the weather-M so that the auto-generated
+# save-dir (see offline_train_aura.py::_build_save_dir) reflects the
+# training pool. There is no dedicated `__weather__` tag in the save-dir
+# scheme -- R5's bash glob relies on timestamp ordering to pick up the
+# newest matching run.
+#
+# Run:
+#   python offline_train_aura.py --cfg cfgs/cifar10_c/offline_aura_fc_domaingen_weather.yaml
+# ============================================================
+SETTING: "gradual_mixed_corruption"
+
+# ===== Model =====
+MODEL:
+  ADAPTATION: aura
+  ARCH: Standard
+
+# ===== Scenario metadata (checkpoint records the weather-M pool) =====
+CORRUPTION:
+  DATASET: cifar10_c
+  SEVERITY:
+    - 5
+  TYPE:
+    - zoom_blur
+    - snow
+    - frost
+    - fog
+    - brightness
+    - contrast
+    - elastic_transform
+
+# ===== AURA_FC-BN structure (must match the online config loading this ckpt) =====
+AURA:
+  LATENT_DIM: 500
+  OBS_COV_SCALE: 0.01
+  GAMMA: 0.999
+  INIT_COV_SCALE: 0.01
+  OFFLINE_CKPT: ""          # empty during offline training
+  NUM_ADAPT_SAMPLES: 10
+  NUM_EPISODES: 1000
+  BN_GROUPING_MODE: "per_stage_bn"
+  STAGE_SELECTION: ["fc"]
+
+# ===== Offline training settings =====
+OFFLINE:
+  NUM_EPISODES: 1000
+  NUM_UPDATES_PER_EPISODE: 10
+  Q_SAMPLES: 30
+  LR: 1.0e-5
+  PRINT_FREQ: 100
+  # Weather/digital M-pool. Takes precedence over MIXED_GRADUAL.CORRUPTION_TYPES
+  # inside offline_train_aura.py when non-empty.
+  CORRUPTION_POOL:
+    - zoom_blur
+    - snow
+    - frost
+    - fog
+    - brightness
+    - contrast
+    - elastic_transform
+
+# ===== Reproducibility =====
+RNG_SEED: 42
+DETERMINISM: True
+
+# ===== Scenario Definition =====
+# Kept at the test-time pool N (standard 6 noise/blur) for metadata coherence.
+# The offline dataloader ignores this when OFFLINE.CORRUPTION_POOL is non-empty.
+MIXED_GRADUAL:
+  FRAMES: 5000
+  BATCH_SIZE: 6
+  CORRUPTION_TYPES:
+    - gaussian_noise
+    - shot_noise
+    - impulse_noise
+    - defocus_blur
+    - glass_blur
+    - motion_blur
+  SEVERITY: 5
+  SCHEDULE_TYPE: "random"
+
+# ===== Paths =====
+DATA_DIR: ./data
+CKPT_DIR: ./ckpt

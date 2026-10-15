@@ -1,0 +1,73 @@
+# Offline training config for AURA with nonlinear residual lifting on CIFAR-10-C.
+# Controlled comparison vs cfgs/cifar10_c/offline_aura.yaml (linear).
+# Trains: A_list  +  NonlinearCorrection networks (delta)
+# Frozen: phi (source parameters), backbone
+#
+# Run:
+#   python offline_train_aura.py --cfg cfgs/cifar10_c/offline_aura_nonlinear.yaml
+SETTING: "gradual_mixed_corruption"
+
+MODEL:
+  ADAPTATION: aura
+  ARCH: Standard
+
+CORRUPTION:
+  DATASET: cifar10_c
+  SEVERITY:
+    - 5
+  TYPE:
+    - gaussian_noise
+    - shot_noise
+    - impulse_noise
+    - defocus_blur
+    - glass_blur
+    - motion_blur
+    - zoom_blur
+    - snow
+    - frost
+    - fog
+    - brightness
+    - contrast
+    - elastic_transform
+
+# AURA structure — must match online config
+AURA:
+  LATENT_DIM: 500
+  OBS_COV_SCALE: 0.01
+  GAMMA: 0.999
+  INIT_COV_SCALE: 0.01
+  OFFLINE_CKPT: ""
+  NUM_ADAPT_SAMPLES: 10
+  NUM_EPISODES: 1000
+  BN_GROUPING_MODE: "per_stage_bn"
+  STAGE_SELECTION: ["fc","stage_1"]
+  # Nonlinear residual lifting
+  LIFTING:
+    TYPE: "nonlinear"
+    RESIDUAL_LINEAR: True
+    HIDDEN_DIMS: [500]
+    ACTIVATION: "gelu"
+    NORMALIZATION: "none"
+    OUTPUT_SCALE: 1.0
+    ZERO_INIT_OUTPUT: True
+
+# Offline training settings — identical budget to linear for fair comparison
+OFFLINE:
+  NUM_EPISODES: 3000
+  NUM_UPDATES_PER_EPISODE: 10
+  Q_SAMPLES: 30
+  LR: 1.0e-5
+  PRINT_FREQ: 100
+
+RNG_SEED: 42
+DETERMINISM: True
+
+MIXED_GRADUAL:
+  FRAMES: 5000
+  BATCH_SIZE: 6
+  CORRUPTION_TYPES: ["shot_noise","impulse_noise","gaussian_noise","defocus_blur","glass_blur","motion_blur","zoom_blur","snow","frost","fog","brightness","contrast","elastic_transform"]
+  SEVERITY: 5
+  SCHEDULE_TYPE: "random"
+
+DATA_DIR: ./data
+CKPT_DIR: ./ckpt

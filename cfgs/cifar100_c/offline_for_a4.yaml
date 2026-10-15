@@ -1,0 +1,56 @@
+# Offline training cfg to produce a warm-start ckpt for A4 on CIFAR-100-C.
+# After the 2026-04-21 patch to methods/aura.py:_setup_blocks (adding
+# "stage_N." prefix for ResNeXt), stage_1 now registers a real BN block
+# (10 modules / 3,584 params) so we adapt [fc, stage_1] like on CIFAR-10.
+SETTING: "gradual_mixed_corruption"
+
+MODEL:
+  ADAPTATION: aura
+  ARCH: Hendrycks2020AugMix_ResNeXt
+
+CORRUPTION:
+  DATASET: cifar100_c
+  SEVERITY: [5]
+  TYPE:
+    - gaussian_noise
+    - shot_noise
+    - impulse_noise
+    - defocus_blur
+    - glass_blur
+    - motion_blur
+
+AURA:
+  LATENT_DIM: 500
+  OBS_COV_SCALE: 0.001
+  GAMMA: 0.999
+  INIT_COV_SCALE: 0.01
+  OFFLINE_CKPT: ""
+  NUM_ADAPT_SAMPLES: 15
+  NUM_EPISODES: 1000
+  BN_GROUPING_MODE: "per_stage_bn"
+  STAGE_SELECTION: ["fc", "stage_1"]
+
+OFFLINE:
+  NUM_EPISODES: 1000
+  NUM_UPDATES_PER_EPISODE: 10
+  Q_SAMPLES: 30
+  LR: 1.0e-5
+  PRINT_FREQ: 100
+
+MIXED_GRADUAL:
+  FRAMES: 5000
+  BATCH_SIZE: 6
+  CORRUPTION_TYPES:
+    - gaussian_noise
+    - shot_noise
+    - impulse_noise
+    - defocus_blur
+    - glass_blur
+    - motion_blur
+  SEVERITY: 5
+  SCHEDULE_TYPE: "random"
+
+RNG_SEED: 42
+DETERMINISM: True
+DATA_DIR: ./data
+CKPT_DIR: ./ckpt

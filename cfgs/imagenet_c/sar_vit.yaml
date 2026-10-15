@@ -1,0 +1,42 @@
+# SAR on ViT-B/16 — the ViT baseline from the SAR paper.
+# ViT-B/16 (timm ImageNet-1k weights) counterpart of sar.yaml.
+
+SETTING: "gradual_mixed_corruption"
+
+# ===== Evaluation Data Generation (identical to aura_vit.yaml) =====
+MIXED_GRADUAL:
+  FRAMES: 1000
+  BATCH_SIZE: 64
+  CORRUPTION_TYPES: ["motion_blur", "defocus_blur", "shot_noise", "gaussian_noise", "glass_blur", "impulse_noise"]
+  SEVERITY: 5
+  SCHEDULE_TYPE: "random"
+
+RNG_SEED: 1
+
+TEST:
+  BATCH_SIZE: 64
+
+MODEL:
+  ADAPTATION: sar
+  ARCH: vit_base_patch16_224
+
+OPTIM:
+  BETA: 0.9
+  LR: 0.001
+  METHOD: SGD
+  MOMENTUM: 0.9
+  STEPS: 1
+  WD: 0.0
+
+CORRUPTION:
+  DATASET: imagenet_c
+  SEVERITY:
+    - 5
+  TYPE:
+    - gaussian_noise
+    - shot_noise
+    - impulse_noise
+    - defocus_blur
+    - glass_blur
+    - motion_blur
+    - zoom_blur

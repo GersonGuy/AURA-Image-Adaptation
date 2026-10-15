@@ -1,0 +1,52 @@
+SETTING: "gradual_mixed_corruption"
+
+MODEL:
+  ADAPTATION: aura
+  ARCH: resnet50
+
+# ===== Evaluation Data Generation =====
+MIXED_GRADUAL:
+  FRAMES: 1000
+  BATCH_SIZE: 64
+  CORRUPTION_TYPES: ["motion_blur", "defocus_blur", "shot_noise", "gaussian_noise", "glass_blur", "impulse_noise"]
+  SEVERITY: 5
+  SCHEDULE_TYPE: "random"
+
+RNG_SEED: 1
+
+TEST:
+  BATCH_SIZE: 64
+
+CORRUPTION:
+  DATASET: imagenet_c
+  SEVERITY:
+    - 5
+  TYPE:
+    - gaussian_noise
+    - shot_noise
+    - impulse_noise
+    - defocus_blur
+    - glass_blur
+    - motion_blur
+    - zoom_blur
+    - snow
+    - frost
+    - fog
+    - brightness
+    - contrast
+    - elastic_transform
+    - pixelate
+    - jpeg_compression
+
+AURA:
+  LATENT_DIM: 500
+  OBS_COV_SCALE: 0.001
+  GAMMA: 0.999
+  INIT_COV_SCALE: 0.01
+  OFFLINE_CKPT: ""
+  NUM_ADAPT_SAMPLES: 15
+  NUM_EPISODES: 1000
+  BN_GROUPING_MODE: "per_stage_bn"
+  # FC-only start for ImageNet; expand to ["fc","stage_1"] / ["fc","stage_1","stage_4"] once the jacrev->jacfwd switch is validated.
+  STAGE_SELECTION: ["fc"]
+  JACOBIAN_MODE: "auto"

@@ -1,0 +1,54 @@
+# Offline training cfg to produce the warm-start ckpt A4's warm cells need.
+# Mirrors cfgs/cifar10_c/aura.yaml so _load_and_validate_checkpoint passes.
+SETTING: "gradual_mixed_corruption"
+
+MODEL:
+  ADAPTATION: aura
+  ARCH: Standard
+
+CORRUPTION:
+  DATASET: cifar10_c
+  SEVERITY: [5]
+  TYPE:
+    - gaussian_noise
+    - shot_noise
+    - impulse_noise
+    - defocus_blur
+    - glass_blur
+    - motion_blur
+
+AURA:
+  LATENT_DIM: 500
+  OBS_COV_SCALE: 0.001
+  GAMMA: 0.999
+  INIT_COV_SCALE: 0.01
+  OFFLINE_CKPT: ""
+  NUM_ADAPT_SAMPLES: 15
+  NUM_EPISODES: 1000
+  BN_GROUPING_MODE: "per_stage_bn"
+  STAGE_SELECTION: ["fc", "stage_1"]
+
+OFFLINE:
+  NUM_EPISODES: 500
+  NUM_UPDATES_PER_EPISODE: 3
+  Q_SAMPLES: 10
+  LR: 1.0e-5
+  PRINT_FREQ: 50
+
+MIXED_GRADUAL:
+  FRAMES: 5000
+  BATCH_SIZE: 6
+  CORRUPTION_TYPES:
+    - gaussian_noise
+    - shot_noise
+    - impulse_noise
+    - defocus_blur
+    - glass_blur
+    - motion_blur
+  SEVERITY: 5
+  SCHEDULE_TYPE: "random"
+
+RNG_SEED: 42
+DETERMINISM: True
+DATA_DIR: ./data
+CKPT_DIR: ./ckpt

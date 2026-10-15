@@ -1,0 +1,39 @@
+SETTING: "gradual_mixed_corruption"
+
+MODEL:
+  ADAPTATION: sgd_base
+  ARCH: Standard
+
+# ===== Evaluation Data Generation =====
+MIXED_GRADUAL:
+  FRAMES: 1000
+  BATCH_SIZE: 100
+  CORRUPTION_TYPES: [zoom_blur,snow,frost,fog,brightness,contrast,elastic_transform,pixelate,jpeg_compression]
+  SEVERITY: 5
+  SCHEDULE_TYPE: "random"
+
+RNG_SEED: 1
+
+CORRUPTION:
+  DATASET: cifar10_c
+  SEVERITY:
+    - 5
+  TYPE:
+    - zoom_blur
+    - snow
+    - frost
+    - fog
+    - brightness
+    - contrast
+    - elastic_transform
+    - pixelate
+    - jpeg_compression
+
+SGD_BASE:
+  LR: 1e-3
+  OPTIM_METHOD: "Adam"
+  WEIGHT_DECAY: 0.0
+  NUM_UPDATES_PER_SAMPLE: 5
+  NUM_ADAPT_SAMPLES: 15
+  STAGE_SELECTION: ["fc", "stage_1"]
+  LOSS: "cross_entropy"

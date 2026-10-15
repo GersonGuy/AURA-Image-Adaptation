@@ -1,0 +1,72 @@
+# EcoTTA on CIFAR-100-C under the PAPER's protocol (arXiv 2303.01904, Sec. 4; Tab. 1 CIFAR-100 col).
+# Continual adaptation over the 15 corruptions at severity 5, CoTTA order, batch 64, no reset,
+# one optimizer step per batch.
+#
+# Backbone: RobustBench Hendrycks2020AugMix_ResNeXt = CifarResNeXt-29 (6,900,132 params).
+# NOTE its forward applies input normalization internally ((x - mu)/sigma); the EcoTTA stem shim
+# reproduces that -- see methods/ecotta.py::_ResNeXtStem.
+#
+# Local reference points measured in this repo (gradual protocol, from the paper's Table 1):
+#   BN-Test 31.32 +/- 2.08 ; ROID 26.50 +/- 1.37
+#
+# Requires a warm-up checkpoint for this exact topology:
+#   CUDA_VISIBLE_DEVICES=0 python warmup_train_ecotta.py --cfg cfgs/cifar100_c/ecotta_paper_continual.yaml
+
+SETTING: continual
+
+MODEL:
+  ADAPTATION: ecotta
+  ARCH: Hendrycks2020AugMix_ResNeXt
+
+RNG_SEED: 1
+
+CORRUPTION:
+  DATASET: cifar100_c
+  SEVERITY:
+    - 5
+  TYPE:
+    - gaussian_noise
+    - shot_noise
+    - impulse_noise
+    - defocus_blur
+    - glass_blur
+    - motion_blur
+    - zoom_blur
+    - snow
+    - frost
+    - fog
+    - brightness
+    - contrast
+    - elastic_transform
+    - pixelate
+    - jpeg_compression
+
+TEST:
+  BATCH_SIZE: 64
+
+OPTIM:
+  STEPS: 1
+
+ECOTTA:
+  K: 5                        # resnext29 [1,2,1,2,3]: every group inside one stage, denser shallow
+  CONV_KERNEL_SIZE: 0         # 0 -> family default; resnext29 -> kernel 1 (paper Sec. 4.2)
+  BN_PLACEMENT: "before"
+  LR: 5e-3
+  # MOMENTUM 0.9 is the reference's value (EcoTTA_ref/main.py:282); the paper never reports it.
+  # On CIFAR-10/WRN this diverged; see the CIFAR-100 numbers in the report before trusting it.
+  MOMENTUM: 0.9
+  LAMBDA_REG: 0.5
+  E_MARGIN: 0.4
+  UPDATE_RULE: "algorithm1"
+  REG_TEACHER: "source_path"
+  REG_REDUCTION: "mean_all"
+  REG_DETACH_TARGET: true
+  FROZEN_BN_MODE: "eval"
+  WARMUP_CKPT: ""
+  REQUIRE_WARMUP: true
+  WARMUP_EPOCHS: 10
+  WARMUP_LR: 5e-2
+  WARMUP_BATCH_SIZE: 64
+
+TIMING:
+  ENABLED: false

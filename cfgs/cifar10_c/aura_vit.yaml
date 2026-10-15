@@ -1,0 +1,55 @@
+# AURA — ViT-B/16 on CIFAR-10-C (Table 1 'AURA' row).
+#
+# CIFAR-10-C x ViT-B/16 counterpart of the Table 1 protocol.
+# Backbone: timm vit_base_patch16_224 with CIFAR-10 fine-tuned weights pulled from
+# the HuggingFace hub (99.3% clean test accuracy, verified in-repo). The 32x32
+# CIFAR-C frames are bicubic-upsampled to 224x224 by datasets/data_loading.py.
+#
+# The Table 1 protocol is baked in below (6-type noise/blur pool, 1000 frames x
+# batch 100 = 1e5 samples, severity 5) — do NOT rely on the weather/digital pool
+# that the older cifar10_c yamls ship with.
+#
+# Stage choice differs from the WRN config: the CNN runs use [fc, stage_1], but on a
+# ViT the adapted stage must be at or after the graph-splicing cut for the frozen-head
+# cache to help, so we use the deepest LayerNorm group [fc, stage_4] (blocks 9-11 +
+# final norm). Swap in stage_1/2/3 to ablate depth (splicing then covers less).
+
+SETTING: "gradual_mixed_corruption"
+
+MODEL:
+  ADAPTATION: aura
+  ARCH: vit_base_patch16_224
+  CKPT_PATH: "hf_hub:edadaltocg/vit_base_patch16_224_in21k_ft_cifar10"
+
+MIXED_GRADUAL:
+  FRAMES: 1000
+  BATCH_SIZE: 100
+  CORRUPTION_TYPES: ["gaussian_noise","shot_noise","impulse_noise","defocus_blur","glass_blur","motion_blur"]
+  SEVERITY: 5
+  SCHEDULE_TYPE: "random"
+
+RNG_SEED: 1
+
+TEST:
+  BATCH_SIZE: 100
+
+CORRUPTION:
+  DATASET: cifar10_c
+  SEVERITY: [5]
+  TYPE: [gaussian_noise, shot_noise, impulse_noise, defocus_blur, glass_blur, motion_blur]
+
+AURA:
+  # Table 1 footnote: m = 500 for CIFAR-10-C
+  LATENT_DIM: 500
+  OBS_COV_SCALE: 0.001
+  GAMMA: 0.999
+  INIT_COV_SCALE: 0.01
+  OFFLINE_CKPT: ""
+  NUM_ADAPT_SAMPLES: 15
+  NUM_EPISODES: 1000
+  BN_GROUPING_MODE: "per_stage_bn"
+  STAGE_SELECTION: ["fc", "stage_4"]
+  # 10 classes -> reverse mode is the cheap direction (jacfwd would vmap the tail
+  # forward over sum(latent_dim)=1000 tangents and blow up activation memory)
+  JACOBIAN_MODE: "rev"
+  JAC_CHUNK_SIZE: 0

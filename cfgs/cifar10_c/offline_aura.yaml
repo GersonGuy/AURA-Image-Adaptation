@@ -1,0 +1,74 @@
+# ============================================================
+# Offline training config for AURA_FC on CIFAR-10
+#
+# Run:
+#   python offline_train_aura.py --cfg cfgs/cifar10_c/offline_aura_fc.yaml
+#
+# This file is only for OFFLINE training.
+# The path to a saved offline checkpoint should be set later
+# in the ONLINE config (for example: aura_fc.yaml).
+# ============================================================
+SETTING: "gradual_mixed_corruption"
+# ===== Model =====
+MODEL:
+  ADAPTATION: aura
+  ARCH: Standard
+
+# ===== Dataset / scenario =====
+# Offline training always uses clean CIFAR-10 data.
+# The corruption type/severity below are only saved as scenario metadata
+# so the checkpoint can later be matched to the correct online setup.
+CORRUPTION:
+  DATASET: cifar10_c
+  SEVERITY:
+    - 5
+  TYPE:
+    - gaussian_noise
+    - shot_noise
+    - impulse_noise
+    - defocus_blur
+    - glass_blur
+    - motion_blur
+    - zoom_blur
+    - snow
+    - frost
+    - fog
+    - brightness
+    - contrast
+    - elastic_transform
+# ===== AURA_FC structure =====
+# These values must match the online AURA_FC config.
+AURA:
+  LATENT_DIM: 500
+  OBS_COV_SCALE: 0.01
+  GAMMA: 0.999
+  INIT_COV_SCALE: 0.01
+  OFFLINE_CKPT: "" # Leave empty in offline training
+  NUM_ADAPT_SAMPLES: 10
+  NUM_EPISODES: 1000
+  BN_GROUPING_MODE: "per_stage_bn" 
+  STAGE_SELECTION: ["fc","stage_1"]
+
+# ===== Offline training settings =====
+OFFLINE:
+  NUM_EPISODES: 3000   # Number of offline update steps
+  NUM_UPDATES_PER_EPISODE: 10  # How many updates per episode (reuses same batch)
+  Q_SAMPLES: 30         # Query samples per episode
+  LR: 1.0e-5          # Learning rate for A
+  PRINT_FREQ: 100     # Print logs / optionally save every N episodes
+
+# ===== Reproducibility =====
+RNG_SEED: 42
+DETERMINISM: True
+
+# ===== Scenario Definition =====
+MIXED_GRADUAL:
+  FRAMES: 5000
+  BATCH_SIZE: 6
+  CORRUPTION_TYPES: ["shot_noise", "impulse_noise","gaussian_noise","defocus_blur","glass_blur","motion_blur","zoom_blur","snow","frost","fog","brightness","contrast","elastic_transform"]
+  SEVERITY: 5
+  SCHEDULE_TYPE: "random"
+
+# ===== Paths =====
+DATA_DIR: ./data
+CKPT_DIR: ./ckpt

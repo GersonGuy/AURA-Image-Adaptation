@@ -1,0 +1,97 @@
+# ============================================================
+# Offline training config for AURA_FC-BN — DOMAIN-GENERALIZATION ablation
+#
+# Pool M (offline training, set via OFFLINE.CORRUPTION_POOL):
+#   gaussian_noise, shot_noise, impulse_noise,
+#   defocus_blur, glass_blur, motion_blur, zoom_blur   (7 corruptions)
+#
+# Pool N (online eval, set via MIXED_GRADUAL.CORRUPTION_TYPES in the
+# online config, e.g. cfgs/cifar10_c/aura.yaml):
+#   the standard 6 used for the headline table
+#   (motion_blur, defocus_blur, shot_noise, gaussian_noise,
+#    glass_blur, impulse_noise)
+#
+# Note: here we keep MIXED_GRADUAL.CORRUPTION_TYPES at the 6-corruption
+# test-time pool purely for documentation / metadata consistency. The
+# actual offline pool comes from OFFLINE.CORRUPTION_POOL below.
+#
+# Run:
+#   python offline_train_aura.py --cfg cfgs/cifar10_c/offline_aura_fc_domaingen.yaml
+# ============================================================
+SETTING: "gradual_mixed_corruption"
+
+# ===== Model =====
+MODEL:
+  ADAPTATION: aura
+  ARCH: Standard
+
+# ===== Scenario metadata (saved into the checkpoint for online-side matching) =====
+CORRUPTION:
+  DATASET: cifar10_c
+  SEVERITY:
+    - 5
+  TYPE:
+    - gaussian_noise
+    - shot_noise
+    - impulse_noise
+    - defocus_blur
+    - glass_blur
+    - motion_blur
+    - zoom_blur
+
+# ===== AURA_FC-BN structure (must match online config) =====
+AURA:
+  LATENT_DIM: 500
+  OBS_COV_SCALE: 0.01
+  GAMMA: 0.999
+  INIT_COV_SCALE: 0.01
+  OFFLINE_CKPT: ""          # leave empty in offline training
+  NUM_ADAPT_SAMPLES: 10
+  NUM_EPISODES: 1000
+  BN_GROUPING_MODE: "per_stage_bn"
+  STAGE_SELECTION: ["fc"]
+
+# ===== Offline training settings =====
+OFFLINE:
+  NUM_EPISODES: 1000
+  NUM_UPDATES_PER_EPISODE: 10
+  Q_SAMPLES: 30
+  LR: 1.0e-5
+  PRINT_FREQ: 100
+  # === Domain-gen override: M-pool (7 corruptions) used ONLY for offline training.
+  # When non-empty, offline_train_aura.py uses this list instead of
+  # MIXED_GRADUAL.CORRUPTION_TYPES. Leave empty ([]) to fall back to legacy
+  # behavior where offline and online share MIXED_GRADUAL.CORRUPTION_TYPES.
+  CORRUPTION_POOL:
+    - gaussian_noise
+    - shot_noise
+    - impulse_noise
+    - defocus_blur
+    - glass_blur
+    - motion_blur
+    - zoom_blur
+
+# ===== Reproducibility =====
+RNG_SEED: 42
+DETERMINISM: True
+
+# ===== Scenario Definition =====
+# Kept as the online test-time pool N (standard 6) so the saved metadata
+# reflects the downstream evaluation setup. Not used for the offline
+# dataloader when OFFLINE.CORRUPTION_POOL is non-empty.
+MIXED_GRADUAL:
+  FRAMES: 5000
+  BATCH_SIZE: 6
+  CORRUPTION_TYPES:
+    - motion_blur
+    - defocus_blur
+    - shot_noise
+    - gaussian_noise
+    - glass_blur
+    - impulse_noise
+  SEVERITY: 5
+  SCHEDULE_TYPE: "random"
+
+# ===== Paths =====
+DATA_DIR: ./data
+CKPT_DIR: ./ckpt

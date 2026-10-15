@@ -1,0 +1,35 @@
+SETTING: "gradual_mixed_corruption"
+
+MODEL:
+  ADAPTATION: sgd_base
+  ARCH: resnet18_mnist
+  CKPT_PATH: "./ckpt/resnet18_mnist.pth"
+
+MIXED_GRADUAL:
+  FRAMES: 1000
+  BATCH_SIZE: 100
+  CORRUPTION_TYPES: ["shot_noise","impulse_noise","motion_blur","glass_blur","fog","brightness"]
+  SEVERITY: 1
+  SCHEDULE_TYPE: "random"
+
+RNG_SEED: 1
+
+CORRUPTION:
+  DATASET: mnist_c
+  SEVERITY: [1]
+  TYPE:
+    - shot_noise
+    - impulse_noise
+    - motion_blur
+    - glass_blur
+    - fog
+    - brightness
+
+SGD_BASE:
+  LR: 1e-3
+  OPTIM_METHOD: "Adam"
+  WEIGHT_DECAY: 0.0
+  NUM_UPDATES_PER_SAMPLE: 5
+  NUM_ADAPT_SAMPLES: 15
+  STAGE_SELECTION: ["fc", "stage_1"]
+  LOSS: "cross_entropy"

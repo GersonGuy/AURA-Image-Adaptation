@@ -1,0 +1,36 @@
+SETTING: "gradual_mixed_corruption"
+
+MODEL:
+  ADAPTATION: sgd_base
+  ARCH: Hendrycks2020AugMix_ResNeXt
+
+# ===== Evaluation Data Generation =====
+MIXED_GRADUAL:
+  FRAMES: 1000
+  BATCH_SIZE: 100
+  CORRUPTION_TYPES: ["motion_blur","defocus_blur","shot_noise","gaussian_noise","glass_blur", "impulse_noise"]
+  SEVERITY: 5
+  SCHEDULE_TYPE: "random"
+
+RNG_SEED: 1
+
+CORRUPTION:
+  DATASET: cifar100_c
+  SEVERITY:
+    - 5
+  TYPE:
+    - gaussian_noise
+    - shot_noise
+    - impulse_noise
+    - defocus_blur
+    - glass_blur
+    - motion_blur
+
+SGD_BASE:
+  LR: 1e-3
+  OPTIM_METHOD: "Adam"
+  WEIGHT_DECAY: 0.0
+  NUM_UPDATES_PER_SAMPLE: 5
+  NUM_ADAPT_SAMPLES: 15
+  STAGE_SELECTION: ["fc", "stage_1"]
+  LOSS: "cross_entropy"

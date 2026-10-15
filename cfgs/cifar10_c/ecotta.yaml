@@ -1,0 +1,59 @@
+SETTING: "gradual_mixed_corruption"
+
+MODEL:
+  ADAPTATION: ecotta
+  ARCH: Standard
+
+# ===== Evaluation Data Generation =====
+MIXED_GRADUAL:
+  FRAMES: 1000
+  BATCH_SIZE: 100
+  CORRUPTION_TYPES: [zoom_blur,snow,frost,fog,brightness,contrast,elastic_transform,pixelate,jpeg_compression]
+  SEVERITY: 5
+  SCHEDULE_TYPE: "random"
+
+RNG_SEED: 1
+CORRUPTION:
+  DATASET: cifar10_c
+  SEVERITY:
+    - 5
+  TYPE:
+    - zoom_blur
+    - snow
+    - frost
+    - fog
+    - brightness
+    - contrast
+    - elastic_transform
+    - pixelate
+    - jpeg_compression
+
+TEST:
+  BATCH_SIZE: 100
+
+OPTIM:
+  # EcoTTA builds its own SGD from ECOTTA.LR / ECOTTA.MOMENTUM (ECOTTA.USE_OWN_OPTIM: True),
+  # so OPTIM.LR / OPTIM.METHOD are unused unless USE_OWN_OPTIM is set to False.
+  STEPS: 1
+
+# NOTE: this is the repo-local `gradual_mixed_corruption` protocol, for comparison against
+# AURA / ROID. It has NO paper counterpart and its frames are heavily clean-weighted, so numbers
+# from here are not comparable to published EcoTTA results. For that, use
+# cfgs/cifar10_c/ecotta_paper_continual.yaml.
+ECOTTA:
+  K: 5                      # groups [2,2,2,2,4] on WRN-28-10 (paper Tab. 13)
+  BN_PLACEMENT: "before"    # paper Sec. 4.2; "after" is the rejected design (i) ablation
+  LR: 5e-3                  # online SGD lr for the meta networks
+  MOMENTUM: 0.9
+  LAMBDA_REG: 0.5           # paper value for CIFAR (the reference code uses 0.25)
+  E_MARGIN: 0.4             # H_0 = 0.4 * ln(num_classes)
+  FROZEN_BN_MODE: "eval"    # frozen encoder keeps its source BN statistics (paper)
+  UPDATE_RULE: "algorithm1" # paper Alg. 1: entropy backward + Detach_parts + reg backward -> ONE step
+  DETACH_GROUP_INPUT: true  # per-partition gradient isolation for R_k (regularization pass only)
+  # Warm-up: "" auto-derives ckpt/warmup/ckpt_ecotta_<dataset>_<arch>_K<K>_bn<placement>_seed<seed>.pth
+  # Produce it with:  python warmup_train_ecotta.py --cfg cfgs/cifar10_c/ecotta.yaml
+  WARMUP_CKPT: ""
+  REQUIRE_WARMUP: true      # cold-started EcoTTA is near-random, so fail loudly rather than silently
+  WARMUP_EPOCHS: 10         # paper value for CIFAR; lower it for smoke tests
+  WARMUP_LR: 5e-2
+  WARMUP_BATCH_SIZE: 64

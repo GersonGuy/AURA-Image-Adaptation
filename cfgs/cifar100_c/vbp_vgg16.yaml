@@ -1,0 +1,29 @@
+SETTING: "gradual_mixed_corruption"
+
+MODEL:
+  ADAPTATION: vbp
+  ARCH: vgg16_cifar100
+  CKPT_PATH: "./ckpt/vgg16_cifar100.pth"
+
+MIXED_GRADUAL:
+  FRAMES: 1000
+  BATCH_SIZE: 128
+  CORRUPTION_TYPES: ["gaussian_noise", "shot_noise", "impulse_noise", "defocus_blur", "glass_blur", "motion_blur", "zoom_blur", "snow", "frost", "fog", "brightness", "contrast", "elastic_transform", "pixelate", "jpeg_compression"]
+  SEVERITY: 5
+  SCHEDULE_TYPE: "random"
+
+CORRUPTION:
+  DATASET: cifar100_c
+  SEVERITY: [5]
+  TYPE: [gaussian_noise, shot_noise, impulse_noise, defocus_blur, glass_blur, motion_blur, zoom_blur, snow, frost, fog, brightness, contrast, elastic_transform, pixelate, jpeg_compression]
+
+VBP:
+  TARGET_MODE: "all"
+  NUM_ADAPT_SAMPLES: 15
+  OBS_COV_SCALE: 1.0
+  INIT_COV_SCALE: 0.0001
+  GAMMA: 0.999
+  DIAGONAL_COV: True
+  TOP_K_CLASSES: 0
+  USE_SECOND_ORDER: False
+  SUPERVISED: True

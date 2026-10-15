@@ -1,0 +1,51 @@
+# Offline training cfg for MNIST-C aura warm-start ckpts.
+SETTING: "gradual_mixed_corruption"
+
+MODEL:
+  ADAPTATION: aura
+  ARCH: resnet18_mnist
+  CKPT_PATH: "./ckpt/resnet18_mnist.pth"
+
+CORRUPTION:
+  DATASET: mnist_c
+  SEVERITY: [1]
+  TYPE:
+    - shot_noise
+    - impulse_noise
+    - motion_blur
+    - glass_blur
+    - fog
+    - brightness
+
+AURA:
+  LATENT_DIM: 500
+  OBS_COV_SCALE: 0.001
+  GAMMA: 0.999
+  INIT_COV_SCALE: 0.01
+  OFFLINE_CKPT: ""
+  NUM_ADAPT_SAMPLES: 15
+  NUM_EPISODES: 1000
+  BN_GROUPING_MODE: "per_stage_bn"
+  STAGE_SELECTION: ["fc","stage_1","stage_2","stage_3","stage_4"]
+  JACOBIAN_MODE: "auto"
+  JAC_CHUNK_SIZE: 0
+
+OFFLINE:
+  NUM_EPISODES: 500
+  NUM_UPDATES_PER_EPISODE: 3
+  Q_SAMPLES: 10
+  LR: 1.0e-5
+  PRINT_FREQ: 25
+
+MIXED_GRADUAL:
+  FRAMES: 5000
+  BATCH_SIZE: 16
+  CORRUPTION_TYPES:
+    - shot_noise
+    - impulse_noise
+    - motion_blur
+    - glass_blur
+    - fog
+    - brightness
+  SEVERITY: 1
+  SCHEDULE_TYPE: "random"

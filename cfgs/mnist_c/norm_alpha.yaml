@@ -1,0 +1,32 @@
+SETTING: "gradual_mixed_corruption"
+
+MODEL:
+  ADAPTATION: bnalpha
+  ARCH: resnet18_mnist
+  CKPT_PATH: "./ckpt/resnet18_mnist.pth"
+
+BN:
+  ALPHA: 0.1
+
+TEST:
+  BATCH_SIZE: 1
+
+CORRUPTION:
+  DATASET: mnist_c
+  SEVERITY: [1]
+  TYPE:
+    - shot_noise
+    - impulse_noise
+    - motion_blur
+    - glass_blur
+    - fog
+    - brightness
+
+MIXED_GRADUAL:
+  FRAMES: 1000
+  BATCH_SIZE: 100
+  CORRUPTION_TYPES: ["shot_noise","impulse_noise","motion_blur","glass_blur","fog","brightness"]
+  SEVERITY: 1
+  SCHEDULE_TYPE: "random"
+
+RNG_SEED: 1

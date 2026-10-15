@@ -1,0 +1,65 @@
+# Offline training cfg for ImageNet-C aura A-matrix warm-start.
+# Mirrors cfgs/cifar100_c/offline_for_a4.yaml with:
+#   - resnet50 backbone (stage_1..4 via torchvision layer1..4 patterns)
+#   - LATENT_DIM=500 (not 1000 like cifar100): at 1000 classes × fc = 2.05M
+#     params, LATENT_DIM=1000 → A = 2.05 GB + grads + Adam = OOM on 8 GB.
+#     500d keeps A around 1 GB which fits.
+#   - image-sampled (not pixel-blended) gradual_mixed via
+#     GradualMixedImagenetCDataset.
+SETTING: "gradual_mixed_corruption"
+
+MODEL:
+  ADAPTATION: aura
+  ARCH: resnet50
+
+CORRUPTION:
+  DATASET: imagenet_c
+  SEVERITY: [5]
+  TYPE:
+    - gaussian_noise
+    - shot_noise
+    - impulse_noise
+    - defocus_blur
+    - glass_blur
+    - motion_blur
+
+AURA:
+  LATENT_DIM: 500
+  OBS_COV_SCALE: 0.001
+  GAMMA: 0.999
+  INIT_COV_SCALE: 0.01
+  OFFLINE_CKPT: ""
+  NUM_ADAPT_SAMPLES: 15
+  NUM_EPISODES: 100
+  BN_GROUPING_MODE: "per_stage_bn"
+  STAGE_SELECTION: ["fc", "stage_1"]
+  JACOBIAN_MODE: "auto"    # auto picks jacfwd when num_classes >= latent_dim
+
+OFFLINE:
+  NUM_EPISODES: 100
+  NUM_UPDATES_PER_EPISODE: 3
+  Q_SAMPLES: 10
+  LR: 5.0e-6
+  PRINT_FREQ: 5
+
+MIXED_GRADUAL:
+  FRAMES: 500
+  BATCH_SIZE: 11           # 1 context + Q_SAMPLES=10 query per episode
+  CORRUPTION_TYPES:
+    - gaussian_noise
+    - shot_noise
+    - impulse_noise
+    - defocus_blur
+    - glass_blur
+    - motion_blur
+  SEVERITY: 5
+  SCHEDULE_TYPE: "random"
+
+TEST:
+  BATCH_SIZE: 64
+  NUM_WORKERS: 2
+
+RNG_SEED: 42
+DETERMINISM: True
+DATA_DIR: ./data
+CKPT_DIR: ./ckpt

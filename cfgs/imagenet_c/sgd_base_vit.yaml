@@ -1,0 +1,44 @@
+# SGD_Base on ViT-B/16 — gradient-based reference at matched stage selection.
+# ViT-B/16 (timm ImageNet-1k weights) counterpart of sgd_base.yaml.
+
+SETTING: "gradual_mixed_corruption"
+
+# ===== Evaluation Data Generation (identical to aura_vit.yaml) =====
+MIXED_GRADUAL:
+  FRAMES: 1000
+  BATCH_SIZE: 64
+  CORRUPTION_TYPES: ["motion_blur", "defocus_blur", "shot_noise", "gaussian_noise", "glass_blur", "impulse_noise"]
+  SEVERITY: 5
+  SCHEDULE_TYPE: "random"
+
+RNG_SEED: 1
+
+TEST:
+  BATCH_SIZE: 64
+
+MODEL:
+  ADAPTATION: sgd_base
+  ARCH: vit_base_patch16_224
+
+SGD_BASE:
+  LR: 1e-3
+  OPTIM_METHOD: "Adam"
+  WEIGHT_DECAY: 0.0
+  NUM_UPDATES_PER_SAMPLE: 5
+  NUM_ADAPT_SAMPLES: 15
+  # "stage_4" = transformer blocks 9-11 + final norm (see models/arch_utils.py)
+  STAGE_SELECTION: ["fc"]
+  LOSS: "cross_entropy"
+
+CORRUPTION:
+  DATASET: imagenet_c
+  SEVERITY:
+    - 5
+  TYPE:
+    - gaussian_noise
+    - shot_noise
+    - impulse_noise
+    - defocus_blur
+    - glass_blur
+    - motion_blur
+    - zoom_blur

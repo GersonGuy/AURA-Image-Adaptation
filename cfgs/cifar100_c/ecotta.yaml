@@ -1,0 +1,55 @@
+# EcoTTA on CIFAR-100-C, repo-local gradual_mixed_corruption protocol (mirrors
+# cfgs/cifar10_c/ecotta.yaml). For paper-comparable numbers use ecotta_paper_continual.yaml.
+SETTING: "gradual_mixed_corruption"
+
+MODEL:
+  ADAPTATION: ecotta
+  ARCH: Hendrycks2020AugMix_ResNeXt
+
+MIXED_GRADUAL:
+  FRAMES: 1000
+  BATCH_SIZE: 100
+  CORRUPTION_TYPES: [zoom_blur,snow,frost,fog,brightness,contrast,elastic_transform,pixelate,jpeg_compression]
+  SEVERITY: 5
+  SCHEDULE_TYPE: "random"
+
+RNG_SEED: 1
+CORRUPTION:
+  DATASET: cifar100_c
+  SEVERITY:
+    - 5
+  TYPE:
+    - zoom_blur
+    - snow
+    - frost
+    - fog
+    - brightness
+    - contrast
+    - elastic_transform
+    - pixelate
+    - jpeg_compression
+
+TEST:
+  BATCH_SIZE: 100
+
+OPTIM:
+  STEPS: 1
+
+ECOTTA:
+  K: 5                      # resnext29 partition [1,2,1,2,3] over 9 blocks
+  CONV_KERNEL_SIZE: 0       # 0 -> family default; resnext29 -> 1 (paper Sec. 4.2)
+  BN_PLACEMENT: "before"
+  LR: 5e-3
+  MOMENTUM: 0.9
+  LAMBDA_REG: 0.5
+  E_MARGIN: 0.4
+  UPDATE_RULE: "algorithm1"
+  REG_TEACHER: "source_path"
+  REG_REDUCTION: "mean_all"
+  REG_DETACH_TARGET: true
+  FROZEN_BN_MODE: "eval"
+  WARMUP_CKPT: ""
+  REQUIRE_WARMUP: true
+  WARMUP_EPOCHS: 10
+  WARMUP_LR: 5e-2
+  WARMUP_BATCH_SIZE: 64

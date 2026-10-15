@@ -1,0 +1,34 @@
+MODEL:
+  ADAPTATION: roid
+  ARCH: Standard
+TEST:
+  BATCH_SIZE: 100
+CORRUPTION:
+  DATASET: cifar10_c
+  SEVERITY:
+    - 5
+  TYPE:
+    - zoom_blur
+    - snow
+    - frost
+    - fog
+    - brightness
+    - contrast
+    - elastic_transform
+    - pixelate
+    - jpeg_compression
+OPTIM:
+  METHOD: Adam
+  STEPS: 1
+  BETA: 0.9
+  LR: 1e-3
+  WD: 0.
+MIXED_GRADUAL:
+  FRAMES: 1000
+  BATCH_SIZE: 100 
+  CORRUPTION_TYPES: [zoom_blur,snow,frost,fog,brightness,contrast,elastic_transform,pixelate,jpeg_compression]
+  SEVERITY: 5
+  SCHEDULE_TYPE: "random"
+ROID:
+  SUPERVISED: true
+  ADAPT_SAMPLES: 15

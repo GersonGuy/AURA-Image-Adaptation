@@ -1,0 +1,35 @@
+SETTING: "gradual_mixed_corruption"
+
+MODEL:
+  ADAPTATION: aura_fc
+  ARCH: Standard
+
+# ===== Evaluation Data Generation =====
+# Control exactly how the data is generated line-by-line:
+MIXED_GRADUAL:
+  FRAMES: 1000               # Set sequence to match offline steps exactly
+  BATCH_SIZE: 100               
+  CORRUPTION_TYPES: ["shot_noise", "impulse_noise","gaussian_noise","defocus_blur","glass_blur","motion_blur"]
+  SEVERITY: 5
+  SCHEDULE_TYPE: "linear_overlap"
+CORRUPTION:
+  DATASET: cifar10_c
+  SEVERITY:
+    - 5
+  TYPE:
+    - gaussian_noise
+    - shot_noise
+    - impulse_noise
+    - defocus_blur
+    - glass_blur
+    - motion_blur
+AURA_FC:
+  LATENT_DIM: 6410
+  OBS_COV_SCALE: 0.099
+  GAMMA: 0.999
+  INIT_COV_SCALE: 10.1
+  # Path to offline-trained latent representation. Empty = cold-start.
+  # To reproduce with the offline rep: run scripts/prepare_offline.sh and paste the produced path.
+  OFFLINE_CKPT: ""
+  NUM_ADAPT_SAMPLES: 10
+  NUM_EPISODES: 3000

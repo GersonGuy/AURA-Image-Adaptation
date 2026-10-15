@@ -1,0 +1,80 @@
+# EcoTTA under the PAPER's protocol (arXiv 2303.01904, Sec. 4 "Experimental setup"; Tab. 1a / 19).
+#
+# Continual adaptation over the 15 CIFAR-10-C corruptions at severity 5, in the standard
+# CoTTA order, batch 64, no reset between corruptions, one optimizer step per batch.
+#
+# This is the config to use for any comparison against published EcoTTA numbers.
+# cfgs/cifar10_c/ecotta.yaml runs the repo-local `gradual_mixed_corruption` protocol instead,
+# which has no paper counterpart and whose frames are heavily clean-weighted -- useful for
+# in-repo comparison against AURA/ROID, useless for fidelity checking.
+#
+# Paper reference points (CIFAR-10-C, severity 5, WRN-28, continual):
+#   mean error over the 15 corruptions: 16.8% (K=5), 16.9% (K=4)
+#   first three corruptions: gaussian_noise 23.8, shot_noise 18.7, impulse_noise 25.7
+#   Source 72.3 / 65.7 / 72.9 ; tBN (BN-stats) 28.6 / 26.8 / 37.0
+#
+# Requires a warm-up checkpoint for the matching topology:
+#   CUDA_VISIBLE_DEVICES=0 python warmup_train_ecotta.py --cfg cfgs/cifar10_c/ecotta_paper_continual.yaml
+
+SETTING: continual
+
+MODEL:
+  ADAPTATION: ecotta
+  ARCH: Standard
+
+RNG_SEED: 1
+
+CORRUPTION:
+  DATASET: cifar10_c
+  SEVERITY:
+    - 5
+  TYPE:
+    - gaussian_noise
+    - shot_noise
+    - impulse_noise
+    - defocus_blur
+    - glass_blur
+    - motion_blur
+    - zoom_blur
+    - snow
+    - frost
+    - fog
+    - brightness
+    - contrast
+    - elastic_transform
+    - pixelate
+    - jpeg_compression
+
+TEST:
+  BATCH_SIZE: 64            # paper Sec. 4 (Appendix E notes the lr is rescaled if this changes)
+
+OPTIM:
+  STEPS: 1                  # Algorithm 1 performs exactly one optimizer step per batch
+
+ECOTTA:
+  K: 5
+  BN_PLACEMENT: "before"    # paper Sec. 4.2; "after" is the rejected design (i) ablation
+  LR: 5e-3                  # paper Sec. 4, at batch 64
+  # MOMENTUM 0.9 is the reference's value (EcoTTA_ref/main.py:282); the paper never reports it.
+  # MEASURED: with BN_PLACEMENT "before", momentum 0.9 DIVERGES -- collapse to chance by the 3rd
+  # corruption, 15-corruption mean 82.43%. Momentum 0.0 is stable (31.32% over the first three
+  # vs 33.45% static and 30.66% BN-Stats) but is a TUNED value that neither the paper nor the
+  # reference supports. The reference-supported value is kept as the default so that no number
+  # produced by this config is silently tuned; override to 0.0 deliberately and label it.
+  MOMENTUM: 0.9
+  REG_TEACHER: "source_path"  # parameter-independent anchor, matching the reference's out1
+  REG_REDUCTION: "mean_all"   # the reference's reduction (L1Loss(reduction='none')(...).mean())
+  REG_DETACH_TARGET: true
+  LAMBDA_REG: 0.5           # paper value for CIFAR
+  E_MARGIN: 0.4             # H_0 = 0.4 * ln(num_classes)
+  UPDATE_RULE: "algorithm1"
+  DETACH_GROUP_INPUT: true
+  FROZEN_BN_MODE: "eval"    # the original network is frozen, source BN statistics retained
+  WARMUP_CKPT: ""           # "" -> auto-derived path (see methods/ecotta.py::default_warmup_path)
+  REQUIRE_WARMUP: true
+  WARMUP_EPOCHS: 10         # paper: 10 epochs for CIFAR
+  WARMUP_LR: 5e-2
+  WARMUP_BATCH_SIZE: 64
+
+TIMING:
+  ENABLED: false

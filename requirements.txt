@@ -1,0 +1,33 @@
+# Core deep learning framework
+torch>=2.0.0,<=2.5.1
+torchvision>=0.15.0,<=0.20.1
+
+# AutoAttack (dependency of vendored RobustBench)
+autoattack @ git+https://github.com/fra31/auto-attack@a39220048b3c9f2cca9a4d3a54604793c68eca7e
+
+# Backbones & architectures
+timm>=1.0.0
+open_clip_torch>=2.20.0
+huggingface-hub>=0.20.0
+safetensors>=0.4.0
+einops>=0.7.0
+
+# Scientific computing and data processing
+numpy>=1.24.0
+scipy>=1.10.0
+pillow>=9.5.0
+pandas>=2.0.0
+matplotlib>=3.7.0
+
+# Utilities & Configuration
+yacs>=0.1.8
+iopath>=0.1.10
+jinja2>=3.1.0
+packaging>=23.0
+requests>=2.31.0
+tqdm>=4.65.0
+webdataset>=0.2.0
+
+# Testing & optimization baselines
+pytest>=7.0.0
+cma>=3.3.0

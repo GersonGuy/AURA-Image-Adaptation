@@ -1,0 +1,28 @@
+SETTING: "gradual_mixed_corruption"
+
+MODEL:
+  ADAPTATION: ekf_fc
+  ARCH: Hendrycks2020AugMix
+
+MIXED_GRADUAL:
+  FRAMES: 500
+  BATCH_SIZE: 64
+  CORRUPTION_TYPES: ["gaussian_noise","shot_noise","impulse_noise","defocus_blur","glass_blur","motion_blur"]
+  SEVERITY: 3
+  SCHEDULE_TYPE: "random"
+
+CORRUPTION:
+  DATASET: imagenet_c
+  SEVERITY: [3]
+  TYPE: [gaussian_noise, shot_noise, impulse_noise, defocus_blur, glass_blur, motion_blur]
+
+TEST:
+  BATCH_SIZE: 64
+
+EKF_FC:
+  OBS_COV_SCALE: 0.001
+  GAMMA: 0.999
+  INIT_COV_SCALE: 0.01
+  NUM_ADAPT_SAMPLES: 15
+  DIAGONAL_COV: True
+  TOP_K_CLASSES: 20

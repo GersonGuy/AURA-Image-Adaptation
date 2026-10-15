@@ -1,0 +1,28 @@
+SETTING: "gradual_mixed_corruption"
+
+MODEL:
+  ADAPTATION: bnema
+  ARCH: Standard
+TEST:
+  BATCH_SIZE: 200
+CORRUPTION:
+  DATASET: cifar10_c
+  SEVERITY:
+    - 5
+  TYPE:
+    - zoom_blur
+    - snow
+    - frost
+    - fog
+    - brightness
+    - contrast
+    - elastic_transform
+    - pixelate
+    - jpeg_compression
+    
+MIXED_GRADUAL:
+  FRAMES: 1000               
+  BATCH_SIZE: 100               
+  CORRUPTION_TYPES: [zoom_blur,snow,frost,fog,brightness,contrast,elastic_transform,pixelate,jpeg_compression]
+  SEVERITY: 5
+  SCHEDULE_TYPE: "random"

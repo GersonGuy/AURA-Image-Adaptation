@@ -1,0 +1,76 @@
+# ELaTTA (Luo et al., arXiv:2510.11068) — ViT-B/16 on CIFAR-10-C.
+#
+# THIS IS THE FAITHFUL BACKBONE FAMILY. Every image-classification experiment in the paper uses
+# ViT-B (ImageNet-C/V2/R/Sketch, DomainNet-126); the CNN results in Table 6 are a secondary
+# "other backbones" study. The paper still never touches CIFAR, so nothing here can be checked
+# against a published number -- but the encoder/head cut, the feature statistics and the head
+# calibration all match the regime ELaTTA was designed and tuned in.
+#
+# Why this config exists: on WRN-28-10 the source model is CONFIDENTLY WRONG under severity-5
+# corruption (pre-adaptation entropy 0.12-0.35 nats at ~49% error), so entropy minimisation has
+# nothing to grip and ELaTTA cannot beat Source at any sigma0. See docs/elatta/results.md.
+#
+# Latent cut: the final class-token representation (D=768), i.e. the pre-logit feature entering
+# the head -- exactly what the paper specifies for ViT-B. `Cls` = the final linear layer.
+#
+# Backbone: timm vit_base_patch16_224 with CIFAR-10 fine-tuned weights from the HF hub
+# (99.3% clean test accuracy, verified in-repo). 32x32 CIFAR-C frames are bicubic-upsampled to
+# 224x224 by datasets/data_loading.py.
+#
+# ELaTTA is inference-only (no gradients, no activation buffering), so VRAM here is the
+# streaming-method figure (~1.6 GB at batch 100 x 224px), NOT the ~9-10 GB that tent/sar/roid
+# need to backprop through ViT-B/16. It fits an 8 GB card comfortably.
+#
+# The offline basis (N=20 clean CIFAR-10 TRAIN images -> rank-16 SVD of the centered feature
+# matrix) is built and cached automatically on first run, into
+#   ckpt/elatta/cifar10_c__vit_base_patch16_224__k16__N20__seed1.pth
+
+SETTING: "gradual_mixed_corruption"
+
+MODEL:
+  ADAPTATION: elatta
+  ARCH: vit_base_patch16_224
+  CKPT_PATH: "hf_hub:edadaltocg/vit_base_patch16_224_in21k_ft_cifar10"
+
+MIXED_GRADUAL:
+  FRAMES: 1000
+  BATCH_SIZE: 100
+  CORRUPTION_TYPES: ["gaussian_noise","shot_noise","impulse_noise","defocus_blur","glass_blur","motion_blur"]
+  SEVERITY: 5
+  SCHEDULE_TYPE: "random"
+
+RNG_SEED: 1
+
+TEST:
+  BATCH_SIZE: 100
+  WINDOW_LENGTH: 1
+
+CORRUPTION:
+  DATASET: cifar10_c
+  SEVERITY: [5]
+  TYPE: [gaussian_noise, shot_noise, impulse_noise, defocus_blur, glass_blur, motion_blur]
+
+OPTIM:
+  STEPS: 1                  # There is no optimizer in this method; OPTIM.* is unused.
+
+ELATTA:
+  K: 16                     # paper
+  N_ITERS: 8                # paper (a hard stop; n=10 DEGRADES in the paper's own ablation)
+  POPULATION: 0             # 0 -> 4 + floor(3 ln 16) = 12, the paper's formula
+  N_SOURCE_SAMPLES: 20      # paper (ablated to 50,000; 20 suffices)
+  BASIS_SCALING: "orthonormal"  # PAPER-LITERAL. The paper states orthonormality twice and its
+                            # Prop. III.1 / Prop. III.3(ii) proofs require it; "whitened" breaks
+                            # Eq. (26)'s isometry and measures ~2.8 pp worse. Ablation only.
+  SIGMA0: -1.0              # auto (-> 1.0 under the whitened basis). The paper reports NO sigma0.
+  BASIS_CKPT: ""
+  AUTO_BUILD_BASIS: true
+  BASIS_SOURCE_SPLIT: "train"   # leak-free: the test stream comes from the CIFAR-10 TEST images
+  BASIS_SAMPLE_ORDER: "random"
+  INIT_MODE: "strict"       # the paper's headline protocol
+  SELECTION: "best_ever"    # the paper's stated rule
+  CMA_CONSTANTS: "tutorial"
+  INCLUDE_UNADAPTED: false  # paper-faithful: p = 0 is NOT admitted as a candidate
+  LOG_EVERY: 50
+
+TIMING:
+  ENABLED: false

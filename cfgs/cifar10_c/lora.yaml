@@ -1,0 +1,43 @@
+SETTING: "gradual_mixed_corruption"
+
+MODEL:
+  ADAPTATION: lora_base
+  ARCH: Standard
+
+# ===== Evaluation Data Generation =====
+# Identical to aura.yaml — same stream configuration
+MIXED_GRADUAL:
+  FRAMES: 1000
+  BATCH_SIZE: 100
+  CORRUPTION_TYPES: [zoom_blur,snow,frost,fog,brightness,contrast,elastic_transform,pixelate,jpeg_compression]
+  SEVERITY: 5
+  SCHEDULE_TYPE: "random"
+
+RNG_SEED: 1
+
+CORRUPTION:
+  DATASET: cifar10_c
+  SEVERITY:
+    - 5
+  TYPE:
+    - zoom_blur
+    - snow
+    - frost
+    - fog
+    - brightness
+    - contrast
+    - elastic_transform
+    - pixelate
+    - jpeg_compression
+
+LORA:
+  RANK: 4
+  ALPHA: 8.0
+  LR: 1e-3
+  OPTIM_METHOD: "Adam"
+  WEIGHT_DECAY: 0.0
+  MOMENTUM: 0.9
+  NESTEROV: False
+  NUM_UPDATES_PER_SAMPLE: 1
+  NUM_ADAPT_SAMPLES: 15
+  SCOPE: "fc_stage1"

@@ -1,0 +1,86 @@
+# TinyTTA (Jia et al., NeurIPS 2024) on the REPO-LOCAL `gradual_mixed_corruption` protocol,
+# for comparison against AURA / ROID / EcoTTA. This protocol has no counterpart in the TinyTTA
+# paper (which is per-corruption, batch 1, severity 5), so numbers from here are NOT comparable to
+# published TinyTTA results.
+#
+# TRAP (see docs/tinytta/implementation_notes.md Sec. 4.3 and the project's Table-1 protocol note):
+# the corruption pool below is the shipped 9-type weather/digital pool. Table 1 uses the 6-type
+# noise/blur pool, supplied only by scripts/results/r1_trimmed.sh via CLI override. Running this
+# yaml directly evaluates a DIFFERENT distribution than Table 1.
+#
+# Requires an offline self-ensemble checkpoint for the matching topology (MANDATORY -- the paper's
+# Limitations section says "TinyTTA requires retraining the model via self-ensemble"):
+#   CUDA_VISIBLE_DEVICES=0 python offline_train_tinytta.py --cfg cfgs/cifar10_c/tinytta.yaml
+#
+# READ BEFORE REPORTING ANY NUMBER FROM THIS CONFIG:
+#  * TINYTTA.LR is the paper's 1e-5, transplanted from App. H (the AUDIO experiment) and tuned at
+#    BATCH 1. At batch 100 with one step per batch this run takes ~1,000 optimizer steps instead of
+#    ~100,000, so total parameter displacement is ~100x smaller. Check the PARAM-DRIFT log lines:
+#    TinyTTA may be inert here.
+#  * Check the EXIT-DIST log lines. If everything exits at the last head there is no early exit and
+#    no self-ensemble, only entropy-SGD on the reused classifier -- i.e. sgd_base with
+#    STAGE_SELECTION ['fc'] and LOSS 'entropy'. That configuration lands in the same accuracy band
+#    as the paper's own 4.3pp mean gain, so accuracy alone cannot tell them apart.
+
+SETTING: "gradual_mixed_corruption"
+
+MODEL:
+  ADAPTATION: tinytta
+  ARCH: Standard
+
+# ===== Evaluation Data Generation =====
+MIXED_GRADUAL:
+  FRAMES: 1000
+  BATCH_SIZE: 100
+  CORRUPTION_TYPES: [zoom_blur,snow,frost,fog,brightness,contrast,elastic_transform,pixelate,jpeg_compression]
+  SEVERITY: 5
+  SCHEDULE_TYPE: "random"
+
+RNG_SEED: 1
+
+CORRUPTION:
+  DATASET: cifar10_c
+  SEVERITY:
+    - 5
+  TYPE:
+    - zoom_blur
+    - snow
+    - frost
+    - fog
+    - brightness
+    - contrast
+    - elastic_transform
+    - pixelate
+    - jpeg_compression
+
+TEST:
+  BATCH_SIZE: 100
+  WINDOW_LENGTH: 1          # > 1 is rejected: the sliding window re-adapts each sample and makes
+                            # the exit histogram meaningless (base.py:83-114)
+
+OPTIM:
+  # TinyTTA builds its own SGD from TINYTTA.LR / MOMENTUM / WD (USE_OWN_OPTIM True), so OPTIM.LR
+  # and OPTIM.METHOD are unused unless USE_OWN_OPTIM is set to False.
+  STEPS: 1                  # A3: one optimizer step per batch
+
+TINYTTA:
+  K: 4                      # measured activation-balanced split [2,2,3,5] on WRN-28-10
+                            # (537.40/524.29/458.75/442.37 MB at batch 100, max/min 1.215)
+  EXIT_K_MODE: "reuse_classifier"   # A12 / App. D: exit K is the pretrained classifier
+  WS_MODE: "per_out_channel"        # A5 default (ref. [12]); "whole_tensor" is Eq. 4 read literally
+  TEST_LOSS: "entropy_exited"       # A1 -- INFERRED, never stated in the paper
+  UPDATE_HEADS: "exited"            # A2 -- the head the sample actually exited at
+  EXIT_MODE: "grouped"              # batch-100 mode; "per_sample" is the paper-faithful batch-1 loop
+  LR: 1e-5                          # A4 -- transplanted from App. H (audio). See the header note.
+  MOMENTUM: 0.9
+  FROZEN_BN_MODE: "eval"            # A19: frozen backbone keeps its source BN statistics
+  GAMMA_MODE: "calibrated"          # thresholds from the offline checkpoint, fitted on CLEAN
+                                    # held-out source train data only -- never on test data
+  OFFLINE_CKPT: ""                  # "" -> ckpt/tinytta/ckpt_tinytta_cifar10_c_Standard_K4_wsper_out_channel_seed1.pth
+  REQUIRE_OFFLINE: true             # fail loudly rather than run with untrained heads
+  LOG_EXIT_DIST: true
+  LOG_PARAM_DRIFT: true
+  LOG_EVERY: 50
+
+TIMING:
+  ENABLED: false

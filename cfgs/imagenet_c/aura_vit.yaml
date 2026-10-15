@@ -1,0 +1,60 @@
+# AURA on a Vision Transformer (ViT-B/16, timm ImageNet-1k weights).
+#
+# Differences vs. the CNN configs (cfgs/imagenet_c/aura.yaml):
+#  * The adapted normalization layers are LayerNorms, not BatchNorms.
+#    BN_GROUPING_MODE / STAGE_SELECTION keep their names; "stage_N" maps to a
+#    contiguous quarter of the transformer block list (ViT-B/16: 0-2, 3-5, 6-8,
+#    9-11). stage_1 also owns the patch-embed norm, stage_4 the final norm/fc_norm.
+#  * JACOBIAN_MODE: fwd — with graph splicing active the replayed tail is only
+#    the last 3 blocks + head, so forward-mode over sum(latent_dim)=128 tangents
+#    is far cheaper than reverse-mode over 1000 classes.
+#
+# Weights are fetched from the HuggingFace hub on first use (needs network
+# access once; afterwards they are cached under $HF_HOME / ~/.cache/huggingface).
+
+SETTING: "gradual_mixed_corruption"
+
+MODEL:
+  ADAPTATION: aura
+  ARCH: vit_base_patch16_224
+
+# ===== Evaluation Data Generation =====
+MIXED_GRADUAL:
+  FRAMES: 1000
+  BATCH_SIZE: 64
+  CORRUPTION_TYPES: ["motion_blur", "defocus_blur", "shot_noise", "gaussian_noise", "glass_blur", "impulse_noise"]
+  SEVERITY: 5
+  SCHEDULE_TYPE: "random"
+
+RNG_SEED: 1
+
+TEST:
+  BATCH_SIZE: 64
+
+CORRUPTION:
+  DATASET: imagenet_c
+  SEVERITY:
+    - 5
+  TYPE:
+    - gaussian_noise
+    - shot_noise
+    - impulse_noise
+    - defocus_blur
+    - glass_blur
+    - motion_blur
+    - zoom_blur
+
+AURA:
+  LATENT_DIM: 64
+  OBS_COV_SCALE: 0.001
+  GAMMA: 0.999
+  INIT_COV_SCALE: 0.01
+  OFFLINE_CKPT: ""
+  NUM_ADAPT_SAMPLES: 15
+  NUM_EPISODES: 1000
+  BN_GROUPING_MODE: "per_stage_bn"
+  # fc + the deepest LayerNorm group. Note the fc block alone is 768*1000+1000
+  # params, so A is [LATENT_DIM, 769k] — keep LATENT_DIM modest on 8 GB cards.
+  STAGE_SELECTION: ["fc", "stage_4"]
+  JACOBIAN_MODE: "fwd"
+  JAC_CHUNK_SIZE: 0

@@ -1,0 +1,163 @@
+# ELaTTA (Luo et al., arXiv:2510.11068) -- CIFAR-100-C. See cfgs/cifar10_c/elatta.yaml for the full
+# provenance notes; only the CIFAR-100-specific points are repeated here.
+#
+# WHY THIS CONFIG DIFFERS FROM THE CIFAR-10 ONE: C=100 here, and the binding constraint on k is
+# rank(W V_k) < C. At k=16 the rank is 16 << 100, so the entropy objective is NOT degenerate and the
+# PAPER'S OWN image-classification defaults (k=16, n=8, N=20, strict) are usable -- unlike CIFAR-10
+# (C=10), where k=16 makes the logit map surjective and the search collapses. This config therefore
+# ships the paper's defaults, and CIFAR-100-C doubles as the test of that class-count explanation.
+#
+# Original header follows.
+# ELaTTA on the REPO-LOCAL `gradual_mixed_corruption` protocol, for
+# comparison against AURA / ROID / EcoTTA / TinyTTA.
+#
+# THE PAPER NEVER TOUCHES CIFAR AT ALL (no CIFAR experiment in v1, v2 or v3) and never runs a
+# gradual/mixed schedule, so NOTHING produced by this config can be checked against a published
+# number. The direct transfers are k=16, n=8, lambda=12, N=20 and the FC-only latent cut; everything
+# else about this protocol is ours.
+#
+# TRAP (see docs/tinytta/implementation_notes.md Sec. 4.3 and the project's Table-1 protocol note):
+# the corruption pool below is the shipped 9-type weather/digital pool. Table 1 uses the 6-type
+# noise/blur pool, supplied only by scripts/results/r1_trimmed.sh via CLI override. Running this
+# yaml directly evaluates a DIFFERENT distribution than Table 1.
+#
+# The offline basis (N clean CIFAR-10 TRAIN images -> rank-k SVD of the centered feature matrix) is
+# built and cached automatically on first run. With the values set below (k=2, N=50000) the path is
+#   ckpt/elatta/cifar100_c__Hendrycks2020AugMix_ResNeXt__k<k>__N<N>__seed1.pth
+# To build it explicitly first (the repo convention):
+#   CUDA_VISIBLE_DEVICES=0 python offline_build_elatta_basis.py --cfg cfgs/cifar10_c/elatta.yaml
+#
+# READ BEFORE REPORTING ANY NUMBER FROM THIS CONFIG:
+#  * sigma0 is NOT REPORTED anywhere in the paper -- it is not even an input to its Algorithm 1.
+#    The value set below is TUNED BY US and is LOGGED at INFO on every run. Check that line.
+#  * The paper's MAIN results are batch 1, but it is not batch-1-everywhere: v3 Sec. IV-C / Table V
+#    define a continual BATCH protocol at batch 64 with a SHARED p per batch. This config runs
+#    batch 100 with INDEPENDENT per-sample searches. The per-sample MECHANICS are exact under a
+#    frozen eval-mode encoder (pointwise in the batch), which the log's "encoder forwards = batches
+#    (1 pass/sample)" and head-eval counters verify; the continual COUPLING rule, however, matches
+#    no protocol in the paper (see the INIT_MODE note below).
+#  * Prop. 3.1: only the component of the shift lying INSIDE span(V_k) is correctable. If the
+#    "prediction changed on X% of samples" diagnostic is near 0%, the corruption is essentially
+#    orthogonal to the top-k source directions and ELaTTA is a no-op -- which is information about
+#    the method, not a bug. MEASURED at k=2 on CIFAR-10-C: only ~16% of the shift energy lies inside
+#    span(V_k). See docs/elatta/results.md "Why the gain is small".
+
+SETTING: "gradual_mixed_corruption"
+
+MODEL:
+  ADAPTATION: elatta
+  ARCH: Hendrycks2020AugMix_ResNeXt
+
+# ===== Evaluation Data Generation =====
+MIXED_GRADUAL:
+  FRAMES: 1000
+  BATCH_SIZE: 100
+  CORRUPTION_TYPES: [zoom_blur,snow,frost,fog,brightness,contrast,elastic_transform,pixelate,jpeg_compression]
+  SEVERITY: 5
+  SCHEDULE_TYPE: "random"
+
+RNG_SEED: 1
+
+CORRUPTION:
+  DATASET: cifar100_c
+  SEVERITY:
+    - 5
+  TYPE:
+    - zoom_blur
+    - snow
+    - frost
+    - fog
+    - brightness
+    - contrast
+    - elastic_transform
+    - pixelate
+    - jpeg_compression
+
+TEST:
+  BATCH_SIZE: 100
+  WINDOW_LENGTH: 1          # > 1 is rejected: ELaTTA has no buffer and no BN statistics to
+                            # accumulate, and base.py's sliding window would re-search each sample.
+
+OPTIM:
+  # There is NO OPTIMIZER in this method -- no lr, no momentum, no weight decay exists. OPTIM.* is
+  # unused. STEPS must be 1: repeating the search would only cost time.
+  STEPS: 1
+
+# ===== PAPER DEFAULTS (valid here because C=100). See docs/elatta/results.md. =====
+# This block is NOT the paper's ImageNet defaults, and that is deliberate: k=16 / n=8 / N=20 /
+# strict scores 48.33% error here, ~4.8 points WORSE than Source (43.52%). The values below score
+# 43.10 +- 0.04% -- better than Source on 5/5 seeds and 12/15 corruptions (sign test p=0.0176), and
+# on 5/5 held-out cells (3 gradual_mixed streams + severities 3 and 4).
+#
+# PROVENANCE, corrected 2026-07-31 after an adversarial re-read of v1/v2/v3. Three of these are OUR
+# empirical findings, not the paper's -- an earlier version of this comment overclaimed paper support.
+# Nothing was ADDED to the method (no trust region, no auxiliary loss).
+#   * k=2, n=2      OURS (empirical). The values appear in the paper but only for its keyword-spotting
+#                   task, and NOT for the reason previously given here: the paper never links k to
+#                   class count (k=2 there is a k/D choice at D=32), it applies k=16 to EVERY image
+#                   backbone including CNNs, it says small k is bad twice, it never ablates k=2 for
+#                   image classification (sweep is k in {8,16,32}), and n=2 underperforms in its own
+#                   IC table. The surjectivity argument below is also OURS, not the paper's:
+#                   with rank(W*V_k) >= C=10 entropy becomes exactly minimizable and the search
+#                   diverges to a degenerate zero-entropy corner; k=2 restores a bounded objective.
+#                   (Measured: rank is 8 at k=8 and 10 at k=16, so the threshold is k>=16, not k>=C.)
+#   * N=50000       OURS (empirical). NOT "the paper's ablation ceiling" in any endorsing sense:
+#                   v2/v3 RECOMMEND N=20 and measure N=50000 as 1.3 pts WORSE than their best. But
+#                   their N curve is non-monotonic with a documented collapse at N~1k (51.52%), and
+#                   at D=640 a 20-sample basis spans only 19 directions: continual mode is WORSE than
+#                   strict on such a basis (45.21 vs 44.42) and BETTER on a well-estimated one
+#                   (44.22 vs 44.54). That interaction is why 50000 is used here.
+#   * continual     DEVIATION. Warm-starting is the paper's better idea (+1.97 pts on ImageNet-C),
+#                   but this is a THIRD protocol: the paper has continual single-instance (batch 1,
+#                   warm-start from the preceding SAMPLE) and continual batch (batch 64, a SHARED p
+#                   across the batch). We run batch 100 with INDEPENDENT per-sample searches
+#                   warm-started from the MEAN of the previous batch's winners. Measured difference
+#                   from the paper's batch rule at this config: <= 0.6 pp.
+#   * orthonormal   PAPER-LITERAL, and required by its theory: Prop. III.1's proof needs V^T V = I,
+#                   and Prop. III.3(ii) Eq. (26)'s margin-transfer isometry is false otherwise.
+#   * SIGMA0 0.05   TUNED BY US. The paper gives no sigma0 in any version -- it is not even an input
+#                   to Algorithm 1. External anchors: FOA (ICML 2024), whose lambda formula ELaTTA
+#                   reuses verbatim, pins sigma0=1.0 in released code -- and we MEASURE that failing
+#                   here (53.59% vs Source 43.52%). PACE (ECML PKDD 2026) independently chose a
+#                   perturbation scale eps=0.045 for the same family, within 10% of our 0.05.
+#                   An interior optimum: 0.2 -> 43.69, 0.1 -> 43.16, 0.05 -> 43.13, 0.02 -> 43.22,
+#                   ->0 = Source. It must be small because continual mode has no reset and no OU
+#                   shrinkage, so p_prev drifts; at sigma0=0.2 `pixelate` alone loses 11.9 pts.
+ELATTA:
+  K: 16                     # PAPER (image classification). Safe here: rank(W V_k)=16 << C=100.
+  N_ITERS: 8                # PAPER (image classification).
+  POPULATION: 0             # 0 -> 4 + floor(3 ln 2) = 6, the paper's formula
+  N_SOURCE_SAMPLES: 20      # PAPER: v2/v3 recommend N=20 (their N curve is non-monotonic).
+  BASIS_SCALING: "orthonormal"  # paper-literal. "whitened" is a reparameterization that measures worse.
+  SIGMA0: -1.0              # AUTO. The paper gives no sigma0 in any version; auto resolves to
+                            # mean(S_k)/sqrt(N-1) under the orthonormal basis and is LOGGED at INFO.
+                            # cf. FOA's 1.0 and PACE's eps=0.045 as external anchors.
+  BASIS_CKPT: ""            # "" -> ckpt/elatta/cifar100_c__Hendrycks2020AugMix_ResNeXt__k<k>__N<N>__seed1.pth
+  AUTO_BUILD_BASIS: true
+  BASIS_SOURCE_SPLIT: "train"   # leak-free: the test stream comes from the CIFAR-10 TEST images
+  BASIS_SAMPLE_ORDER: "random"
+  INIT_MODE: "strict"       # PAPER headline protocol (m^(0)=0, full reset per sample).
+                            # Warm-starts m^(0) = p_prev. "strict" (m^(0)=0) is its headline row and
+                            # is a no-op vs Source here. Only pays off with a well-estimated basis.
+  SELECTION: "best_ever"    # the paper's stated rule (argmin over every coefficient ever sampled)
+  CMA_CONSTANTS: "tutorial" # Hansen arXiv:1604.00772 Table 1; "pycma" = cma.CMAEvolutionStrategy's
+                            # defaults (c_sigma +3 not +5, c_mu rankmu_offset 0.25). The paper names
+                            # no library, so neither set is "the paper's".
+  INCLUDE_UNADAPTED: false  # paper-faithful: p = 0 is NOT admitted as a candidate
+  NORM_MODE: "frozen_source"  # PAPER, and the default. Model in eval(), BatchNorm on the SOURCE
+                            # running statistics -- the paper states the framework "does not require
+                            # updating normalization statistics", and that is what makes its batch-1
+                            # protocol viable. Every ELaTTA number in this repo uses this path.
+                            # The only alternative, "bn_test", is a DELIBERATE NON-PAPER DEPARTURE:
+                            # the BatchNorm layers normalize with the CURRENT TEST BATCH's statistics
+                            # (this repo's bntest baseline) while the rest of ELaTTA is untouched. It
+                            # exists because on CIFAR-10-C/WRN-28-10 the dominant failure is the BN
+                            # statistic mismatch, so the faithful method searches a subspace built
+                            # from broken features; "bn_test" measures what the coefficient search
+                            # adds on top of a recalibrated backbone. It makes the method
+                            # batch-dependent, hence NO LONGER single-instance TTA -- label any such
+                            # number "ELaTTA over a BN-recalibrated backbone", never "ELaTTA".
+  LOG_EVERY: 50
+
+TIMING:
+  ENABLED: false
