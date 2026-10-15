@@ -1,13 +1,22 @@
-# AURA Image Adaptation — Extended
+# AURA — Image Adaptation
 
-Official implementation of:
+Official implementation of **AURA (Adaptive Update through Representation Adaptation)** for image classification and test-time adaptation, accompanying the paper:
 
-**Online Learning via Learned Latent Bayesian Tracking**
-[arXiv:2609.31559](https://arxiv.org/abs/2609.31559)
+**Online Learning via Learned Latent Bayesian Tracking**  
+*Advances in Neural Information Processing Systems (NeurIPS 2026)*
 
+**[Paper (arXiv)](https://arxiv.org/abs/2609.31559)**
 
-The wireless neural receiver experiments are maintained separately:
-https://github.com/GersonGuy/AURA-Receiver
+## Code Repositories
+
+The implementations and experiments associated with the paper are organized into two repositories:
+
+| Repository | Description |
+|------------|-------------|
+| **[AURA-Receiver](https://github.com/GersonGuy/AURA-Receiver)** | Wireless neural receiver experiments, including DeepSIC, learned latent representations, and online Bayesian tracking. |
+| **[AURA-Image-Adaptation](https://github.com/GersonGuy/AURA-Image-Adaptation)** | Image classification and test-time adaptation benchmarks under distribution shifts, including comparisons with TTA baselines. |
+
+Both repositories implement the same underlying AURA framework, adapted to their respective experimental settings.
 
 ---
 
@@ -57,6 +66,13 @@ tests/
 
 ## Setup
 
+Clone the repository:
+
+```bash
+git clone https://github.com/GersonGuy/AURA-Image-Adaptation.git
+cd AURA-Image-Adaptation
+```
+Then create the environment using Conda or pip.
 Using Conda:
 ```bash
 conda env create -f environment.yml
@@ -293,15 +309,15 @@ python scripts/plot_pareto.py
 
 ---
 
-## Acknowledgements and Citation
+## Citation and Credits
 If you use this code, please cite:
 ```bibtex
-@article{aura2025,
-  title   = {Online Learning via Learned Latent Bayesian Tracking},
-  author  = {Guy Gerson, Tomer Raviv, Nir Shlezinger, Tirza Routenberg, Osvaldo Simeone},
-  journal = {arXiv preprint arXiv:2609.31559},
-  year    = {2025},
-  url     = {https://arxiv.org/abs/2609.31559}
+@inproceedings{gerson2026online,
+  title     = {Online Learning via Learned Latent Bayesian Tracking},
+  author    = {Gerson, Guy and Raviv, Tomer and Shlezinger, Nir and Routtenberg, Tirza and Simeone, Osvaldo},
+  booktitle = {Advances in Neural Information Processing Systems},
+  year      = {2026},
+  url       = {https://arxiv.org/abs/2609.31559}
 }
 ```
 This repository builds upon the following codebase:
